@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace NestboxPHP\Nestbox\Babbler;
+namespace NestboxPHP\Babbler;
 
 use NestboxPHP\Nestbox\Nestbox;
-use NestboxPHP\Nestbox\Babbler\Exception\BabblerException;
+use NestboxPHP\Babbler\Exception\BabblerException;
 
 class Babbler extends Nestbox
 {
@@ -127,7 +127,7 @@ class Babbler extends Nestbox
      */
     public function edit_entry(string|int $entryId, string $editor, string $category = "", string $subCateogyr = "",
                                string     $title = "", string $content = "", string $published = "",
-                               bool       $isDraft = null, bool $isHidden = null): bool
+                               bool       $isDraft = null, bool $isHidden = null): int|false
     {
         // verify entry data
         if (0 == intval($entryId)) {

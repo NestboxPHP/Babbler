@@ -1,17 +1,17 @@
 {
-    "name": "nestbox/babbler",
+    "name": "nestboxphp/babbler",
     "description": "Content management for website/blog functionality.",
     "type": "library",
     "require": {
-        "supergnaw/nestbox": "^0.0.1"
+        "nestboxphp/nestbox": "^0.0.1"
     },
     "require-dev": {
-        "supergnaw/nestbox": "^0.0.1"
+        "nestboxphp/nestbox": "^0.0.1"
     },
     "license": "AGPL-3.0",
     "autoload": {
         "psr-4": {
-            "Nestbox\\Babbler\\": "src/"
+            "NestboxPHP\\Babbler\\": "src/"
         }
     },
     "minimum-stability": "beta"

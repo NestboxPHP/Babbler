@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace NestboxPHP\Nestbox\Babbler\Exception;
+namespace NestboxPHP\Babbler\Exception;
 
-use NestboxPHP\Nestbox\Exception;
+use NestboxPHP\Nestbox\Exception\NestboxException;
 
 class BabblerException extends NestboxException
 {
