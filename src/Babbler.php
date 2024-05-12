@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace NestboxPHP\Nestbox\Babbler;
 
-use NestboxPHP\Nestbox\Babbler\Exception\BabblerException;
 use NestboxPHP\Nestbox\Nestbox;
+use NestboxPHP\Nestbox\Babbler\Exception\BabblerException;
 
 class Babbler extends Nestbox
 {

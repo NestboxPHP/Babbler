@@ -11,3 +11,4 @@
 
 # JetBrains Stuff
 .idea*
+/vendor/
