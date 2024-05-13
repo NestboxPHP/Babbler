@@ -9,7 +9,7 @@ use NestboxPHP\Babbler\Exception\BabblerException;
 
 class Babbler extends Nestbox
 {
-    final protected const string PACKAGE_NAME = 'babbler';
+    final protected const PACKAGE_NAME = 'babbler';
 
     public int $babblerAuthorSize = 32;
     public int $babblerCategorySize = 64;
