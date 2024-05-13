@@ -16,12 +16,6 @@ class Babbler extends Nestbox
     public int $babblerSubCategorySize = 64;
     public int $babblerTitleSize = 255;
 
-    use ClassTablesTrait;
-
-    use EntryManagementTrait;
-
-    use EntrySearchTrait;
-
     /**
      * Entry Management
      *  _____       _                __  __                                                   _
