@@ -275,6 +275,10 @@ class Babbler extends Nestbox
                     `category` VARCHAR( {$this->babblerCategorySize} ) NOT NULL ,
                     `sub_category` VARCHAR( {$this->babblerSubCategorySize} ) NOT NULL ,
                     `title` VARCHAR( {$this->babblerTitleSize} ) NOT NULL ,
+                    `fronted_title` VARCHAR(255) AS (
+                        CASE WHEN title LIKE 'The %' 
+                        THEN CONCAT(SUBSTRING(title, 5), ', The')
+                        ELSE title END) STORED NOT NULL AFTER `title`; 
                     `content` MEDIUMTEXT NOT NULL ,
                     PRIMARY KEY ( `entry_id` )
                 ) ENGINE = InnoDB DEFAULT CHARSET=UTF8MB4 COLLATE=utf8mb4_general_ci;";
@@ -284,8 +288,11 @@ class Babbler extends Nestbox
 
     public function create_class_table_babbler_history(): bool
     {
-        // check if history table exists
-        if ($this->valid_schema('babbler_history')) return true;
+        // check for valid schemas
+        if (!$this->valid_schema("babbler_entries")) $this->create_class_table_babbler_entries();
+        if ($this->valid_schema("babbler_history") && $this->valid_trigger("babbler_history_trigger")) {
+            return true;
+        }
 
         // create the history table
         $sql = "CREATE TABLE IF NOT EXISTS `babbler_history` (
@@ -386,7 +393,7 @@ class Babbler extends Nestbox
      *                       |___/
      */
 
-
+    // TODO: make orderBy an array so multiple columns can be sorted
     public function fetch_entry_table(string $orderBy = "", string $sort = "", int $limit = 50, int $start = 0): array
     {
         $orderBy = (!empty($orderBy) && $this->valid_schema('babbler_entries', $orderBy)) ? $orderBy : 'created';
@@ -408,44 +415,44 @@ class Babbler extends Nestbox
     public function fetch_categories(): array
     {
         $output = [];
-        $sql = "SELECT `category`, COUNT(*) as `count` FROM `babbler_entries` GROUP BY `category`;";
+        $sql = "SELECT `category`, COUNT(*) as `count`
+                FROM `babbler_entries` 
+                GROUP BY `category` 
+                ORDER BY `category` ASC;";
 
         if (!$this->query_execute($sql)) return $output;
 
-        foreach ($this->fetch_all_results() as $result) $output[$result['category']] = $result['count'];
-
-        return $output;
+        return $this->fetch_all_results(fetchMode: PDO::FETCH_KEY_PAIR);
     }
 
 
-    public function fetch_sub_categories(string $category = ''): array
+    public function fetch_sub_categories(string $category = ""): array
     {
-        $where = (!empty($category)) ? "WHERE `category` = :category" : "";
-        $sql = "SELECT `sub_category`, COUNT(*) as `count` FROM `babbler_entries` {$where} GROUP BY `sub_category`;";
-        $params = (!empty($category)) ? ["category" => $category] : [];
-        return ($this->query_execute(query: $sql, params: $params)) ? $this->fetch_all_results() : [];
+        $sql = "SELECT `sub_category`, COUNT(*) as `count`
+                FROM `babbler_entries`
+                WHERE `category` LIKE :category
+                GROUP BY `sub_category`
+                ORDER BY `sub_category` ASC;";
+        
+        $params = ["category" => (!empty(trim($category))) ? trim($category) : "%"];
+        if (!$this->query_execute(query: $sql, params: $params)) return [];
+
+        return $this->fetch_all_results(fetchMode: PDO::FETCH_KEY_OAIR);
     }
 
-
-    public function fetch_entries_by_category(string $category, string $sub_category = '', string $order_by = 'created',
-                                              string $sort = '', int $start = 0, int $limit = 10): array
+    // TODO: make orderBy an array so multiple columns can be sorted
+    public function fetch_entries_by_category(string $category, string $subCategory = '', array $orderBy = [],
+                                              int $start = 0, int $limit = 10, bool $showHidden = false): array|bool
     {
-        $where = "`category` = :category" . (!(empty($sub_category)) ? " AND `sub_category` = :sub_category" : '');
-//        $where .= " AND `published` IS NOT NULL AND `is_draft` = 0 AND `is_hidden` = 0"; // hidden for testing purposes
-        $order_by = ($this->valid_schema(table: 'babbler_entries', column: $order_by)) ? $order_by : 'created';
-        $sort = (in_array(needle: strtoupper($sort), haystack: ['ASC', 'DESC'])) ? strtoupper($sort) : 'ASC';
-
-        $sql = "SELECT * FROM `babbler_entries` WHERE {$where} ORDER BY {$order_by} {$sort}";
-
-        if (0 !== $limit) {
-            $sql .= ($start < 0) ? " LIMIT {$limit};" : " LIMIT {$start}, {$limit};";
-        } else {
-            $sql .= ";";
-        }
-
-        $params = ['category' => $category];
-        if (!empty($sub_category)) $params['sub_category'] = $sub_category;
-        return ($this->query_execute($sql, $params)) ? $this->fetch_all_results() : [];
+        $wheres = ($showHidden) ? [
+            "published IS NOT" => null,
+            "is_draft" => 0,
+            "is_hidden" => 0,
+        ] : [];
+        $wheres["category LIKE"] = (trim($category)) ? trim($category) : "%";
+        $wheres["sub_category LIKE"] = (trim($subCategory)) ? trim($subCategory) : "%";
+        $orderBy = ($orderBy) ? $orderBy : ["fronted_title" => "ASC"];
+        return $this->select("babbler_entries", where: $wheres, orderBy: $orderBy, limit: $limit, start: $start);
     }
 
 
