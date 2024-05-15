@@ -39,12 +39,12 @@ class Babbler extends Nestbox
      * @param string|null $published
      * @param bool $isDraft
      * @param bool $isHidden
-     * @return int|false
+     * @return int|bool
      * @throws BabblerException
      */
     public function add_entry(string $category, string $subCategory, string $title, string $content, string $author,
                               string $created = null, string $published = null, bool $isDraft = false,
-                              bool   $isHidden = false): int|false
+                              bool   $isHidden = false): int|bool
     {
         // prepare vars and verify entry
         $emptyStrings = [];
@@ -53,10 +53,8 @@ class Babbler extends Nestbox
         if (0 == strlen(trim($title))) $emptyStrings[] = "'title'";
         if (0 == strlen(trim($content))) $emptyStrings[] = "'content'";
         if (0 == strlen(trim($author))) $emptyStrings[] = "'author'";
-
-        if ($emptyStrings) {
-            throw new BabblerException("Empty strings provided for: " . join(", ", $emptyStrings));
-        }
+        $emptyStrings = join(", ", $emptyStrings);
+        if ($emptyStrings) throw new BabblerException("Empty strings provided for: $emptyStrings");
 
         $params = [
             "category" => trim($category),
@@ -72,36 +70,8 @@ class Babbler extends Nestbox
             "is_hidden" => $isHidden,
         ];
 
-        // create query
-        $sql = "INSERT INTO `babbler_entries` (
-                    `category`
-                    , `sub_category`
-                    , `title`
-                    , `content`
-                    , `created_by`
-                    , `edited_by`
-                    , `created`
-                    , `edited`
-                    , `published`
-                    , `is_draft`
-                    , `is_hidden`
-                ) VALUES (
-                    :category
-                    , :sub_category
-                    , :title
-                    , :content
-                    , :created_by
-                    , :edited_by
-                    , :created
-                    , :edited
-                    , :published
-                    , :is_draft
-                    , :is_hidden
-                );";
-
         // execute
-        if (!$this->query_execute($sql, $params)) return false;
-        return $this->get_row_count();
+        return $this->insert("babbler_entries", rows: $params);
     }
 
 
@@ -111,15 +81,15 @@ class Babbler extends Nestbox
      * @param string|int $entryId
      * @param string $editor
      * @param string $category
-     * @param string $subCateogyr
+     * @param string $subCategory
      * @param string $title
      * @param string $content
      * @param string $published
      * @param bool|null $isDraft
      * @param bool|null $isHidden
-     * @return bool
+     * @return int|false
      */
-    public function edit_entry(string|int $entryId, string $editor, string $category = "", string $subCateogyr = "",
+    public function edit_entry(string|int $entryId, string $editor, string $category = "", string $subCategory = "",
                                string     $title = "", string $content = "", string $published = "",
                                bool       $isDraft = null, bool $isHidden = null): int|false
     {
@@ -129,31 +99,19 @@ class Babbler extends Nestbox
             return false;
         }
 
-        $params = [
-            "entry_id" => $entryId,
-            "edited_by" => $editor
-        ];
-
+        $params = ["edited_by" => $editor];
         if (!empty(trim($category))) $params['category'] = trim($category);
-        if (!empty(trim($subCateogyr))) $params['sub_category'] = trim($subCateogyr);
+        if (!empty(trim($subCategory))) $params['sub_category'] = trim($subCategory);
         if (!empty(trim($title))) $params['title'] = trim($title);
         if (!empty(trim($content))) $params['content'] = trim($content);
         if (preg_match('/\d[4]\-\d\d\-\d\d.\d\d(\:\d\d(\:\d\d)?)?/', $published, $t)) {
             $params["published"] = date(format: 'Y-m-d H:i:s', timestamp: strtotime(datetime: $published));
         }
-        $params["is_draft"] = (isset($isDraft)) ? $isDraft : false;
-        $params["is_hidden"] = (isset($isHidden)) ? $isHidden : false;
-
-        $cols = [];
-        foreach ($params as $column => $value) $cols[] = "`$column` = :$column";
-        $cols = implode(", ", $cols);
-
-        // create query
-        $sql = "UPDATE `babbler_entries` SET $cols WHERE `entry_id` = :entry_id;";
+        if (isset($isDraft)) $params["is_draft"] = $isDraft;
+        if (isset($isHidden)) $params["is_hidden"] = $isHidden;
 
         // execute
-        if (!$this->query_execute($sql, $params)) return false;
-        return $this->get_row_count();
+        return $this->update("babbler_entries", updates: $params, where: ["entry_id" => $entryId]);
     }
 
 
