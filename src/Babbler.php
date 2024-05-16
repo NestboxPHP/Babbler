@@ -6,6 +6,7 @@ namespace NestboxPHP\Babbler;
 
 use NestboxPHP\Nestbox\Nestbox;
 use NestboxPHP\Babbler\Exception\BabblerException;
+use PDO;
 
 class Babbler extends Nestbox
 {
@@ -433,11 +434,11 @@ class Babbler extends Nestbox
                 WHERE `category` LIKE :category
                 GROUP BY `sub_category`
                 ORDER BY `sub_category` ASC;";
-        
+
         $params = ["category" => (!empty(trim($category))) ? trim($category) : "%"];
         if (!$this->query_execute(query: $sql, params: $params)) return [];
 
-        return $this->fetch_all_results(fetchMode: PDO::FETCH_KEY_OAIR);
+        return $this->fetch_all_results(fetchMode: PDO::FETCH_KEY_PAIR);
     }
 
     // TODO: make orderBy an array so multiple columns can be sorted
@@ -462,6 +463,6 @@ class Babbler extends Nestbox
         $sql = "SELECT * FROM `babbler_entries` {$where} AND `title` LIKE :title;";
         $params = ['category' => $category, 'title' => $title];
         if (!empty($sub_category)) $params['sub_category'] = $sub_category;
-        return ($this->query_execute($sql, $params)) ? $this->fetch_all_results(true) : [];
+        return ($this->query_execute($sql, $params)) ? $this->fetch_first_result() : [];
     }
 }
