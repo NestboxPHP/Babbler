@@ -465,4 +465,27 @@ class Babbler extends Nestbox
         if (!empty($sub_category)) $params['sub_category'] = $sub_category;
         return ($this->query_execute($sql, $params)) ? $this->fetch_first_result() : [];
     }
+
+
+
+    /**
+     * Settings
+     *  ____       _   _   _
+     * / ___|  ___| |_| |_(_)_ __   __ _ ___
+     * \___ \ / _ \ __| __| | '_ \ / _` / __|
+     *  ___) |  __/ |_| |_| | | | | (_| \__ \
+     * |____/ \___|\__|\__|_|_| |_|\__, |___/
+     *                             |___/
+     */
+
+
+    public function load_settings(string $package = null): array
+    {
+        return parent::load_settings(Babbler::PACKAGE_NAME);
+    }
+
+    public function save_settings(string $package = null): int|bool
+    {
+        return parent::save_settings(Babbler::PACKAGE_NAME);
+    }
 }
