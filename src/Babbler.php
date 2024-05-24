@@ -186,18 +186,22 @@ class Babbler extends Nestbox
     public function search_entries_threshold(string $words, string $category = "*"): array
     {
         $cases = [];
+        $params = [];
 
         foreach (explode(" ", $this->sanitize_search_string($words)) as $word) {
             $word = preg_replace("/[^\w]+/", "", $word);
 
-            $cases[] = "CASE WHEN FIND IN SET('$word', `content`) > 0 THEN 1 ELSE 0 END";
+            $p = "word_" . strval(count($params));
+            $params[$p] = $word;
+            $cases[] = "CASE WHEN FIND_IN_SET(:$p, REPLACE(`content`, ' ', ',')) > 0 THEN 1 ELSE 0 END";
         }
 
         $cases = implode(" + ", $cases);
 
-        $sql = "SELECT *, SUM($cases) AS 'threshold' FROM `babbler_entries` ORDER BY `threashold` DESC;";
+        $sql = "SELECT * FROM (SELECT *, ($cases) AS `threshold` FROM `babbler_entries`) AS `subquery`
+                WHERE 0 < `threshold` ORDER BY `threshold` DESC;";
 
-        if (!$this->query_execute($sql)) return [];
+        if (!$this->query_execute($sql, $params)) return [];
 
         return $this->fetch_all_results();
     }
