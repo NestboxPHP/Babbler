@@ -281,12 +281,15 @@ class Babbler extends Nestbox
                     `sub_category` VARCHAR( {$this->babblerSubCategorySize} ) NOT NULL ,
                     `title` VARCHAR( {$this->babblerTitleSize} ) NOT NULL ,
                     `fronted_title` VARCHAR(255) AS (
-                        CASE WHEN title LIKE 'The %' 
+                        CASE WHEN title LIKE 'The %'
                         THEN CONCAT(SUBSTRING(title, 5), ', The')
-                        ELSE title END) STORED NOT NULL AFTER `title`; 
+                        ELSE title END
+                    ) STORED NOT NULL ,
                     `content` MEDIUMTEXT NOT NULL ,
+                    `dynamic_content` MEDIUMTEXT NULL ,
                     PRIMARY KEY ( `entry_id` )
                 ) ENGINE = InnoDB DEFAULT CHARSET=UTF8MB4 COLLATE=utf8mb4_general_ci;";
+
         return $this->query_execute($sql);
     }
 
@@ -295,7 +298,7 @@ class Babbler extends Nestbox
     {
         // check for valid schemas
         if (!$this->valid_schema("babbler_entries")) $this->create_class_table_babbler_entries();
-        if ($this->valid_schema("babbler_history") && $this->valid_trigger("babbler_history_trigger")) {
+        if ($this->valid_schema("babbler_history") && $this->valid_trigger("babbler_entries", "babbler_history_trigger")) {
             return true;
         }
 
@@ -320,71 +323,114 @@ class Babbler extends Nestbox
         if (!$this->query_execute($sql)) return false;
 
         // create history trigger
-        $sql = "CREATE TRIGGER IF NOT EXISTS `babbler_history_trigger` AFTER UPDATE ON `babbler_entries`
-                FOR EACH ROW
-                IF ( OLD.edited <> NEW.edited ) THEN
-                    INSERT INTO `babbler_history` (
-                        `entry_id`
-                        , `created`
-                        , `edited`
-                        , `published`
-                        , `is_draft`
-                        , `is_hidden`
-                        , `created_by`
-                        , `edited_by`
-                        , `category`
-                        , `sub_category`
-                        , `title`
-                        , `content`
-                    ) VALUES (
-                        OLD.`entry_id`
-                        , OLD.`created`
-                        , OLD.`edited`
-                        , OLD.`published`
-                        , OLD.`is_draft`
-                        , OLD.`is_hidden`
-                        , OLD.`created_by`
-                        , OLD.`edited_by`
-                        , OLD.`category`
-                        , OLD.`sub_category`
-                        , OLD.`title`
-                        , OLD.`content`
-                    );
-                END IF;
-                CREATE TRIGGER `babbler_delete_trigger` BEFORE DELETE
-                ON `babbler_entries` FOR EACH ROW
-                BEGIN
-                    INSERT INTO `babbler_history` (
-                        `entry_id`
-                        , `created`
-                        , `edited`
-                        , `published`
-                        , `is_draft`
-                        , `is_hidden`
-                        , `created_by`
-                        , `edited_by`
-                        , `category`
-                        , `sub_category`
-                        , `title`
-                        , `content`
-                    ) VALUES (
-                        OLD.`entry_id`
-                        , OLD.`created`
-                        , OLD.`edited`
-                        , OLD.`published`
-                        , OLD.`is_draft`
-                        , OLD.`is_hidden`
-                        , OLD.`created_by`
-                        , OLD.`edited_by`
-                        , OLD.`category`
-                        , OLD.`sub_category`
-                        , OLD.`title`
-                        , OLD.`content`
-                    );
-                END;";
+        $sql = "CREATE TRIGGER IF NOT EXISTS `babbler_history_trigger` AFTER UPDATE ON `babbler_entries`\n" .
+                "FOR EACH ROW\n" .
+                "IF ( OLD.edited <> NEW.edited ) THEN\n" .
+                "    INSERT INTO `babbler_history` (\n" .
+                "        `entry_id`\n" .
+                "        , `created`\n" .
+                "        , `edited`\n" .
+                "        , `published`\n" .
+                "        , `is_draft`\n" .
+                "        , `is_hidden`\n" .
+                "        , `created_by`\n" .
+                "        , `edited_by`\n" .
+                "        , `category`\n" .
+                "        , `sub_category`\n" .
+                "        , `title`\n" .
+                "        , `content`\n" .
+                "    ) VALUES (\n" .
+                "        OLD.`entry_id`\n" .
+                "        , OLD.`created`\n" .
+                "        , OLD.`edited`\n" .
+                "        , OLD.`published`\n" .
+                "        , OLD.`is_draft`\n" .
+                "        , OLD.`is_hidden`\n" .
+                "        , OLD.`created_by`\n" .
+                "        , OLD.`edited_by`\n" .
+                "        , OLD.`category`\n" .
+                "        , OLD.`sub_category`\n" .
+                "        , OLD.`title`\n" .
+                "        , OLD.`content`\n" .
+                "    );\n" .
+                "END IF;\n" .
+                "CREATE TRIGGER `babbler_delete_trigger` BEFORE DELETE\n" .
+                "ON `babbler_entries` FOR EACH ROW\n" .
+                "BEGIN\n" .
+                "    INSERT INTO `babbler_history` (\n" .
+                "        `entry_id`\n" .
+                "        , `created`\n" .
+                "        , `edited`\n" .
+                "        , `published`\n" .
+                "        , `is_draft`\n" .
+                "        , `is_hidden`\n" .
+                "        , `created_by`\n" .
+                "        , `edited_by`\n" .
+                "        , `category`\n" .
+                "        , `sub_category`\n" .
+                "        , `title`\n" .
+                "        , `content`\n" .
+                "    ) VALUES (\n" .
+                "        OLD.`entry_id`\n" .
+                "        , OLD.`created`\n" .
+                "        , OLD.`edited`\n" .
+                "        , OLD.`published`\n" .
+                "        , OLD.`is_draft`\n" .
+                "        , OLD.`is_hidden`\n" .
+                "        , OLD.`created_by`\n" .
+                "        , OLD.`edited_by`\n" .
+                "        , OLD.`category`\n" .
+                "        , OLD.`sub_category`\n" .
+                "        , OLD.`title`\n" .
+                "        , OLD.`content`\n" .
+                "    );\n" .
+                "END;";
 
         // todo: check if trigger added and delete table if trigger creation fails
         return $this->query_execute($sql);
+    }
+
+
+    public function create_class_table_babbler_dynamic_content(): bool
+    {
+        $queries = [];
+
+        if (!$this->valid_schema("babbler_entries")) {
+            if (!$this->create_class_table_babbler_entries()) {
+                return false;
+            }
+        }
+
+        $queries["CREATE TABLE IF NOT EXISTS `babbler_dynamic_content` (\n" .
+                "    `link_id` INT NOT NULL AUTO_INCREMENT ,\n" .
+                "    `pattern` VARCHAR( 1024 ) ,\n" .
+                "    `replacement` VARCHAR( 4096 ) ,\n" .
+                "    PRIMARY KEY ( `link_id` )\n" .
+                ") ENGINE = InnoDB DEFAULT CHARSET=UTF8MB4 COLLATE=utf8mb4_general_ci;"] = null;
+
+        $queries["CREATE TRIGGER IF NOT EXISTS `babbler_dynamic_content_entry_trigger`" .
+                "BEFORE UPDATE ON `babbler_entries`\n" .
+                "FOR EACH ROW\n" .
+                "BEGIN\n" .
+                "    SET NEW.dynamic_content = (\n" .
+                "    SELECT REGEX_REPLACE(NNEW.content, `pattern`, `replacement`)\n" .
+                "    FROM `babbler_dynamic_content`\n" .
+                "    );\n" .
+                "END;"] = null;
+
+        $queries["CREATE TRIGGER IF NOT EXISTS `babbler_dynamic_content_rule_trigger`\n" .
+                "AFTER UPDATE ON `babbler_dynamic_content`\n" .
+                "FOR EACH ROW\n" .
+                "BEGIN\n" .
+                "    UPDATE `babbler_entries`\n" .
+                "    SET `dynamic_content` = REGEX_REPLACE(`content`, NEW.`pattern`, NEW.`replacement`);\n" .
+                "END;"] = null;
+
+        $results = $this->transaction_execute($queries);
+
+        var_dump($results);
+
+        return true;
     }
 
 
