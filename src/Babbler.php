@@ -62,6 +62,7 @@ class Babbler extends Nestbox
             "sub_category" => trim($subCategory),
             "title" => trim($title),
             "content" => trim($content),
+            "dynamic_content" => $this->insert_dynamic_content(trim($content)),
             "created_by" => trim($author),
             "edited_by" => trim($author),
             "created" => date(format: 'Y-m-d H:i:s', timestamp: strtotime(datetime: ($created ?? "now"))),
@@ -105,6 +106,7 @@ class Babbler extends Nestbox
         if (!empty(trim($subCategory))) $params['sub_category'] = trim($subCategory);
         if (!empty(trim($title))) $params['title'] = trim($title);
         if (!empty(trim($content))) $params['content'] = trim($content);
+        if (!empty(trim($content))) $params['dynamic_content'] = $this->insert_dynamic_content(trim($content));
         if (preg_match('/\d[4]\-\d\d\-\d\d.\d\d(\:\d\d(\:\d\d)?)?/', $published, $t)) {
             $params["published"] = date(format: 'Y-m-d H:i:s', timestamp: strtotime(datetime: $published));
         }
@@ -119,12 +121,46 @@ class Babbler extends Nestbox
     /**
      * Deletes an existing entry
      *
-     * @param int $entry_id
+     * @param int $entryId
      * @return bool
      */
-    public function delete_entry(int $entry_id): bool
+    public function delete_entry(int $entryId): bool
     {
-        return $this->delete("babbler_entries", ["entry_id" => $entry_id]);
+        return $this->delete("babbler_entries", ["entry_id" => $entryId]);
+    }
+
+
+    /**
+     * Dynamic Content
+     */
+
+
+    public function edit_dynamic_content_rule(string $pattern, string $replacement, int $orderId = 0): true
+    {
+        // pattern validation
+//        if (!str_starts_with($pattern, "/")) $pattern = "/$pattern";
+
+        $params = [
+            "pattern" => $pattern,
+            "replacement" => $replacement
+        ];
+        if (0 == $orderId) $params["order"] = $orderId;
+
+        return false !== $this->insert("babbler_dynamic_content", $params);
+    }
+
+
+    public function reoder_dynamic_content_rules(array $order): true
+    {
+        $rules = $this->select("babbler_dynamic_content");
+    }
+
+
+    public function generate_dynamic_content(string $text): string
+    {
+        $rules = $this->select("babbler_dynamic_content");
+        foreach ($rules as $rule) $text = preg_replace($rule["pattern"], $rule["replacement"], $text);
+        return $text;
     }
 
 
@@ -317,6 +353,7 @@ class Babbler extends Nestbox
                     `sub_category` VARCHAR( {$this->babblerSubCategorySize} ) NOT NULL ,
                     `title` VARCHAR( {$this->babblerTitleSize} ) NOT NULL ,
                     `content` MEDIUMTEXT NOT NULL ,
+                    `dynamic_content` MEDIUMTEXT NULL ,
                     PRIMARY KEY ( `history_id` )
                 ) ENGINE = InnoDB DEFAULT CHARSET=UTF8MB4 COLLATE=utf8mb4_general_ci;";
 
@@ -327,110 +364,82 @@ class Babbler extends Nestbox
                 "FOR EACH ROW\n" .
                 "IF ( OLD.edited <> NEW.edited ) THEN\n" .
                 "    INSERT INTO `babbler_history` (\n" .
-                "        `entry_id`\n" .
-                "        , `created`\n" .
-                "        , `edited`\n" .
-                "        , `published`\n" .
-                "        , `is_draft`\n" .
-                "        , `is_hidden`\n" .
-                "        , `created_by`\n" .
-                "        , `edited_by`\n" .
-                "        , `category`\n" .
-                "        , `sub_category`\n" .
-                "        , `title`\n" .
-                "        , `content`\n" .
+                "        `entry_id` , \n" .
+                "        `created` , \n" .
+                "        `edited` , \n" .
+                "        `published` , \n" .
+                "        `is_draft` , \n" .
+                "        `is_hidden` , \n" .
+                "        `created_by` , \n" .
+                "        `edited_by` , \n" .
+                "        `category` , \n" .
+                "        `sub_category` , \n" .
+                "        `title` , \n" .
+                "        `content`\n" .
                 "    ) VALUES (\n" .
-                "        OLD.`entry_id`\n" .
-                "        , OLD.`created`\n" .
-                "        , OLD.`edited`\n" .
-                "        , OLD.`published`\n" .
-                "        , OLD.`is_draft`\n" .
-                "        , OLD.`is_hidden`\n" .
-                "        , OLD.`created_by`\n" .
-                "        , OLD.`edited_by`\n" .
-                "        , OLD.`category`\n" .
-                "        , OLD.`sub_category`\n" .
-                "        , OLD.`title`\n" .
-                "        , OLD.`content`\n" .
+                "        OLD.`entry_id` , \n" .
+                "        OLD.`created` , \n" .
+                "        OLD.`edited` , \n" .
+                "        OLD.`published` , \n" .
+                "        OLD.`is_draft` , \n" .
+                "        OLD.`is_hidden` , \n" .
+                "        OLD.`created_by` , \n" .
+                "        OLD.`edited_by` , \n" .
+                "        OLD.`category` , \n" .
+                "        OLD.`sub_category` , \n" .
+                "        OLD.`title` , \n" .
+                "        OLD.`content`\n" .
                 "    );\n" .
                 "END IF;\n" .
                 "CREATE TRIGGER `babbler_delete_trigger` BEFORE DELETE\n" .
                 "ON `babbler_entries` FOR EACH ROW\n" .
                 "BEGIN\n" .
                 "    INSERT INTO `babbler_history` (\n" .
-                "        `entry_id`\n" .
-                "        , `created`\n" .
-                "        , `edited`\n" .
-                "        , `published`\n" .
-                "        , `is_draft`\n" .
-                "        , `is_hidden`\n" .
-                "        , `created_by`\n" .
-                "        , `edited_by`\n" .
-                "        , `category`\n" .
-                "        , `sub_category`\n" .
-                "        , `title`\n" .
-                "        , `content`\n" .
+                "        `entry_id` , \n" .
+                "        `created` , \n" .
+                "        `edited` , \n" .
+                "        `published` , \n" .
+                "        `is_draft` , \n" .
+                "        `is_hidden` , \n" .
+                "        `created_by` , \n" .
+                "        `edited_by` , \n" .
+                "        `category` , \n" .
+                "        `sub_category` , \n" .
+                "        `title` , \n" .
+                "        `content` \n" .
                 "    ) VALUES (\n" .
-                "        OLD.`entry_id`\n" .
-                "        , OLD.`created`\n" .
-                "        , OLD.`edited`\n" .
-                "        , OLD.`published`\n" .
-                "        , OLD.`is_draft`\n" .
-                "        , OLD.`is_hidden`\n" .
-                "        , OLD.`created_by`\n" .
-                "        , OLD.`edited_by`\n" .
-                "        , OLD.`category`\n" .
-                "        , OLD.`sub_category`\n" .
-                "        , OLD.`title`\n" .
-                "        , OLD.`content`\n" .
+                "        OLD.`entry_id` , \n" .
+                "        OLD.`created` , \n" .
+                "        OLD.`edited` , \n" .
+                "        OLD.`published` , \n" .
+                "        OLD.`is_draft` , \n" .
+                "        OLD.`is_hidden` , \n" .
+                "        OLD.`created_by` , \n" .
+                "        OLD.`edited_by` , \n" .
+                "        OLD.`category` , \n" .
+                "        OLD.`sub_category` , \n" .
+                "        OLD.`title` , \n" .
+                "        OLD.`content`\n" .
                 "    );\n" .
                 "END;";
 
-        // todo: check if trigger added and delete table if trigger creation fails
         return $this->query_execute($sql);
     }
 
 
     public function create_class_table_babbler_dynamic_content(): bool
     {
-        $queries = [];
+        // check if entry table exists
+        if ($this->valid_schema('babbler_dynamic_content')) return true;
 
-        if (!$this->valid_schema("babbler_entries")) {
-            if (!$this->create_class_table_babbler_entries()) {
-                return false;
-            }
-        }
+        $sql = "CREATE TABLE IF NOT EXISTS `babbler_dynamic_content` (
+                    `order` INT NOT NULL AUTO_INCREMENT ,
+                    `pattern` VARCHAR( 512 ) UNIQUE NOT NULL ,
+                    `replacement` VARCHAR( 4096 ) NOT NULL ,
+                    PRIMARY KEY ( `order` )
+                ) ENGINE = InnoDB DEFAULT CHARSET=UTF8MB4 COLLATE=utf8mb4_general_ci;";
 
-        $queries["CREATE TABLE IF NOT EXISTS `babbler_dynamic_content` (\n" .
-                "    `link_id` INT NOT NULL AUTO_INCREMENT ,\n" .
-                "    `pattern` VARCHAR( 1024 ) ,\n" .
-                "    `replacement` VARCHAR( 4096 ) ,\n" .
-                "    PRIMARY KEY ( `link_id` )\n" .
-                ") ENGINE = InnoDB DEFAULT CHARSET=UTF8MB4 COLLATE=utf8mb4_general_ci;"] = null;
-
-        $queries["CREATE TRIGGER IF NOT EXISTS `babbler_dynamic_content_entry_trigger`" .
-                "BEFORE UPDATE ON `babbler_entries`\n" .
-                "FOR EACH ROW\n" .
-                "BEGIN\n" .
-                "    SET NEW.dynamic_content = (\n" .
-                "    SELECT REGEX_REPLACE(NNEW.content, `pattern`, `replacement`)\n" .
-                "    FROM `babbler_dynamic_content`\n" .
-                "    );\n" .
-                "END;"] = null;
-
-        $queries["CREATE TRIGGER IF NOT EXISTS `babbler_dynamic_content_rule_trigger`\n" .
-                "AFTER UPDATE ON `babbler_dynamic_content`\n" .
-                "FOR EACH ROW\n" .
-                "BEGIN\n" .
-                "    UPDATE `babbler_entries`\n" .
-                "    SET `dynamic_content` = REGEX_REPLACE(`content`, NEW.`pattern`, NEW.`replacement`);\n" .
-                "END;"] = null;
-
-        $results = $this->transaction_execute($queries);
-
-        var_dump($results);
-
-        return true;
+        return $this->query_execute($sql);
     }
 
 
