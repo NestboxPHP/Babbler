@@ -62,7 +62,7 @@ class Babbler extends Nestbox
             "sub_category" => trim($subCategory),
             "title" => trim($title),
             "content" => trim($content),
-            "dynamic_content" => $this->insert_dynamic_content(trim($content)),
+            "dynamic_content" => $this->generate_dynamic_content(trim($content)),
             "created_by" => trim($author),
             "edited_by" => trim($author),
             "created" => date(format: 'Y-m-d H:i:s', timestamp: strtotime(datetime: ($created ?? "now"))),
@@ -106,7 +106,7 @@ class Babbler extends Nestbox
         if (!empty(trim($subCategory))) $params['sub_category'] = trim($subCategory);
         if (!empty(trim($title))) $params['title'] = trim($title);
         if (!empty(trim($content))) $params['content'] = trim($content);
-        if (!empty(trim($content))) $params['dynamic_content'] = $this->insert_dynamic_content(trim($content));
+        if (!empty(trim($content))) $params['dynamic_content'] = $this->generate_dynamic_content(trim($content));
         if (preg_match('/\d[4]\-\d\d\-\d\d.\d\d(\:\d\d(\:\d\d)?)?/', $published, $t)) {
             $params["published"] = date(format: 'Y-m-d H:i:s', timestamp: strtotime(datetime: $published));
         }
